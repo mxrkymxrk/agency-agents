@@ -2,10 +2,12 @@
 
 > **A complete AI agency at your fingertips** - From frontend wizards to Reddit community ninjas, from whimsy injectors to reality checkers. Each agent is a specialized expert with personality, processes, and proven deliverables.
 
-[![GitHub stars](https://img.shields.io/github/stars/msitarzewski/agency-agents?style=social)](https://github.com/msitarzewski/agency-agents)
+[![GitHub stars](https://img.shields.io/github/stars/mxrkymxrk/agency-agents?style=social)](https://github.com/mxrkymxrk/agency-agents)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://makeapullrequest.com)
 [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-pink?logo=github)](https://github.com/sponsors/msitarzewski)
+
+This repository is a **[fork](https://github.com/mxrkymxrk/agency-agents)** of [msitarzewski/agency-agents](https://github.com/msitarzewski/agency-agents). Upstream owns the original agent library and community; this fork adds **Cursor installation via [Subagents](https://cursor.com/docs/subagents)** (user-wide under `~/.cursor/agents/`) instead of relying only on project `.mdc` rules. See the **Cursor** subsection under [Multi-Tool Integrations](#-multi-tool-integrations).
 
 ---
 
@@ -24,7 +26,26 @@ Born from a Reddit thread and months of iteration, **The Agency** is a growing c
 
 ## ⚡ Quick Start
 
-### Option 1: Use with Claude Code (Recommended)
+### Option 1: Use with Cursor (recommended for this fork)
+
+Subagents are **installed once per machine** (they live in `~/.cursor/agents/`). They use the same OpenCode-style definitions as elsewhere in this repo (`name`, `description`, `mode: subagent`, plus the agent body).
+
+```bash
+git clone https://github.com/mxrkymxrk/agency-agents.git
+cd agency-agents
+
+# Build integration outputs (needed on a fresh clone so OpenCode-format files exist under integrations/)
+./scripts/convert.sh --tool opencode
+
+# Install all Agency agents as Cursor Subagents
+./scripts/install.sh --tool cursor-subagents
+```
+
+Restart Cursor after installing. Invoke specialists with `/agent-name` syntax or natural language (see [Cursor Subagents](https://cursor.com/docs/subagents)). Agent files use YAML frontmatter from the OpenCode conversion (`name`, `description`, `mode`, `color`, …); Cursor reads the fields it supports and ignores the rest.
+
+**Optional — project rules (`.mdc`) instead of or in addition to Subagents:** from a project directory, run `./scripts/install.sh --tool cursor` (or `--cursor-scope global` for user-wide rules). That path is unchanged from upstream; Subagents are the fork’s preferred Cursor workflow.
+
+### Option 2: Use with Claude Code
 
 ```bash
 # Install all agents to your Claude Code directory
@@ -37,7 +58,7 @@ cp engineering/*.md ~/.claude/agents/
 # "Hey Claude, activate Frontend Developer mode and help me build a React component"
 ```
 
-### Option 2: Use as Reference
+### Option 3: Use as Reference
 
 Each agent file contains:
 - Identity & personality traits
@@ -47,7 +68,7 @@ Each agent file contains:
 
 Browse the agents below and copy/adapt the ones you need!
 
-### Option 3: Use with Other Tools (GitHub Copilot, Antigravity, Gemini CLI, OpenCode, OpenClaw, Cursor, Aider, Windsurf, Kimi Code)
+### Option 4: Use with Other Tools (GitHub Copilot, Antigravity, Gemini CLI, OpenCode, OpenClaw, Aider, Windsurf, Kimi Code, …)
 
 ```bash
 # Step 1 -- generate integration files for all supported tools
@@ -62,13 +83,18 @@ Browse the agents below and copy/adapt the ones you need!
 ./scripts/install.sh --tool opencode
 ./scripts/install.sh --tool copilot
 ./scripts/install.sh --tool openclaw
-./scripts/install.sh --tool cursor
+./scripts/install.sh --tool cursor              # .mdc rules (project or global)
+./scripts/install.sh --tool cursor-subagents    # Cursor Subagents (~/.cursor/agents)
 ./scripts/install.sh --tool aider
 ./scripts/install.sh --tool windsurf
 ./scripts/install.sh --tool kimi
 ```
 
 See the [Multi-Tool Integrations](#-multi-tool-integrations) section below for full details.
+
+### Installing on another computer or a teammate’s machine
+
+Each person clones this repo (or their fork), runs `./scripts/convert.sh --tool opencode` if `integrations/opencode/agents/` is not already populated, then `./scripts/install.sh --tool cursor-subagents`. There is no separate “package” — configuration is written under your home directory (`~/.cursor/agents/`). To refresh after `git pull`, re-run `convert.sh` and `install.sh` so files stay in sync with the latest agents.
 
 ---
 
@@ -476,7 +502,7 @@ We welcome contributions! Here's how you can help:
 
 ### Share Your Success Stories
 
-Have you used these agents successfully? Share your story in the [Discussions](https://github.com/msitarzewski/agency-agents/discussions)!
+Have you used these agents successfully? Share your story in [Discussions on this fork](https://github.com/mxrkymxrk/agency-agents/discussions) or [upstream](https://github.com/msitarzewski/agency-agents/discussions).
 
 ---
 
@@ -549,7 +575,7 @@ The Agency works natively with Claude Code, and ships conversion + install scrip
 - **[Antigravity](https://github.com/google-gemini/antigravity)** — `SKILL.md` per agent → `~/.gemini/antigravity/skills/`
 - **[Gemini CLI](https://github.com/google-gemini/gemini-cli)** — extension + `SKILL.md` files → `~/.gemini/extensions/agency-agents/`
 - **[OpenCode](https://opencode.ai)** — `.md` agent files → `.opencode/agents/`
-- **[Cursor](https://cursor.sh)** — `.mdc` rule files → `.cursor/rules/`
+- **[Cursor](https://cursor.sh)** — `.mdc` rules → `.cursor/rules/` (and optional user-wide rules), **or Subagents** → `~/.cursor/agents/` (this fork; OpenCode-format agent files)
 - **[Aider](https://aider.chat)** — single `CONVENTIONS.md` → `./CONVENTIONS.md`
 - **[Windsurf](https://codeium.com/windsurf)** — single `.windsurfrules` → `./.windsurfrules`
 - **[OpenClaw](https://github.com/openclaw/openclaw)** — `SOUL.md` + `AGENTS.md` + `IDENTITY.md` per agent
@@ -587,19 +613,21 @@ The installer scans your system for installed tools, shows a checkbox UI, and le
   [ ]  4)  [ ]  Gemini CLI      (gemini extension)
   [ ]  5)  [ ]  OpenCode        (opencode.ai)
   [ ]  6)  [ ]  OpenClaw        (~/.openclaw/agency-agents)
-  [x]  7)  [*]  Cursor          (.cursor/rules)
-  [ ]  8)  [ ]  Aider           (CONVENTIONS.md)
-  [ ]  9)  [ ]  Windsurf        (.windsurfrules)
-  [ ] 10)  [ ]  Qwen Code       (~/.qwen/agents)
-  [ ] 11)  [ ]  Kimi Code       (~/.config/kimi/agents)
+  [x]  7)  [*]  Cursor rules    (.cursor/rules)
+  [x]  8)  [*]  Cursor subagents (~/.cursor/agents)
+  [ ]  9)  [ ]  Aider           (CONVENTIONS.md)
+  [ ] 10)  [ ]  Windsurf        (.windsurfrules)
+  [ ] 11)  [ ]  Qwen Code       (~/.qwen/agents)
+  [ ] 12)  [ ]  Kimi Code       (~/.config/kimi/agents)
 
-  [1-11] toggle   [a] all   [n] none   [d] detected
+  [1-12] toggle   [a] all   [n] none   [d] detected
   [Enter] install   [q] quit
 ```
 
 **Or install a specific tool directly:**
 ```bash
 ./scripts/install.sh --tool cursor
+./scripts/install.sh --tool cursor-subagents
 ./scripts/install.sh --tool opencode
 ./scripts/install.sh --tool openclaw
 ./scripts/install.sh --tool antigravity
@@ -716,19 +744,29 @@ See [integrations/opencode/README.md](integrations/opencode/README.md) for detai
 <details>
 <summary><strong>Cursor</strong></summary>
 
-Each agent becomes a `.mdc` rule file in `.cursor/rules/` of your project.
+### Cursor Subagents (this fork)
+
+The recommended path for Cursor is **Subagents**: the installer copies OpenCode-format agent files (YAML frontmatter with `mode: subagent`) into **`~/.cursor/agents/`**, available across all projects on that machine.
+
+```bash
+cd /path/to/agency-agents
+./scripts/convert.sh --tool opencode
+./scripts/install.sh --tool cursor-subagents
+```
+
+Restart Cursor after installing. If `integrations/opencode/agents/` is missing, `convert.sh` must be run first; otherwise the installer falls back to the vendored `.opencode/agents/` copy in this repo when present.
+
+### Cursor rules (`.mdc`, upstream-style)
+
+Each agent can instead become a `.mdc` rule file under `.cursor/rules/` (project default) or `~/.cursor/rules/` with `--cursor-scope global`.
 
 ```bash
 cd /your/project
 /path/to/agency-agents/scripts/install.sh --tool cursor
+# or: ./scripts/install.sh --tool cursor --cursor-scope global
 ```
 
-Rules are auto-applied when Cursor detects them in the project. Reference them explicitly:
-```
-Use the @security-engineer rules to review this code.
-```
-
-See [integrations/cursor/README.md](integrations/cursor/README.md) for details.
+Reference rules in prompts as needed (for example `@security-engineer`). See [integrations/cursor/README.md](integrations/cursor/README.md) for details.
 </details>
 
 <details>
@@ -892,8 +930,9 @@ To everyone who has opened a PR, filed an issue, started a Discussion, or simply
 
 ## 💬 Community
 
-- **GitHub Discussions**: [Share your success stories](https://github.com/msitarzewski/agency-agents/discussions)
-- **Issues**: [Report bugs or request features](https://github.com/msitarzewski/agency-agents/issues)
+- **GitHub Discussions (this fork)**: [Share your success stories](https://github.com/mxrkymxrk/agency-agents/discussions)
+- **Issues (this fork)**: [Report bugs or request features](https://github.com/mxrkymxrk/agency-agents/issues)
+- **Upstream**: [msitarzewski/agency-agents](https://github.com/msitarzewski/agency-agents) — original project and broader community
 - **Reddit**: Join the conversation on r/ClaudeAI
 - **Twitter/X**: Share with #TheAgency
 
@@ -902,10 +941,10 @@ To everyone who has opened a PR, filed an issue, started a Discussion, or simply
 ## 🚀 Get Started
 
 1. **Browse** the agents above and find specialists for your needs
-2. **Copy** the agents to `~/.claude/agents/` for Claude Code integration
-3. **Activate** agents by referencing them in your Claude conversations
+2. **Cursor:** run `./scripts/convert.sh --tool opencode` then `./scripts/install.sh --tool cursor-subagents`, restart Cursor — or use `./scripts/install.sh --tool cursor` for project `.mdc` rules
+3. **Claude Code:** `./scripts/install.sh --tool claude-code` or copy categories into `~/.claude/agents/`
 4. **Customize** agent personalities and workflows for your specific needs
-5. **Share** your results and contribute back to the community
+5. **Share** your results and contribute back (upstream or this fork)
 
 ---
 
@@ -913,7 +952,7 @@ To everyone who has opened a PR, filed an issue, started a Discussion, or simply
 
 **🎭 The Agency: Your AI Dream Team Awaits 🎭**
 
-[⭐ Star this repo](https://github.com/msitarzewski/agency-agents) • [🍴 Fork it](https://github.com/msitarzewski/agency-agents/fork) • [🐛 Report an issue](https://github.com/msitarzewski/agency-agents/issues) • [❤️ Sponsor](https://github.com/sponsors/msitarzewski)
+[⭐ Star this fork](https://github.com/mxrkymxrk/agency-agents) • [🍴 Fork it](https://github.com/mxrkymxrk/agency-agents/fork) • [🐛 Report an issue](https://github.com/mxrkymxrk/agency-agents/issues) • [⬆️ Upstream repo](https://github.com/msitarzewski/agency-agents) • [❤️ Sponsor (upstream author)](https://github.com/sponsors/msitarzewski)
 
 Made with ❤️ by the community, for the community
 

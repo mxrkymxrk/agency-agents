@@ -14,18 +14,14 @@
 #   copilot      -- Copy agents to ~/.github/agents/ and ~/.copilot/agents/
 #   antigravity  -- Copy skills to ~/.gemini/antigravity/skills/
 #   gemini-cli   -- Install extension to ~/.gemini/extensions/agency-agents/
-<<<<<<< HEAD
-#   opencode     -- Copy agents to .opencode/agent/ in current directory
-#   cursor       -- Copy rules to .cursor/rules/ (project) or ~/.cursor/rules/ (global)
-#   cursor-subagents -- Copy subagents to ~/.cursor/agents/ (user-wide)
-=======
 #   opencode     -- Copy agents to .opencode/agents/ in current directory
-#   cursor       -- Copy rules to .cursor/rules/ in current directory
->>>>>>> 783f6a72bfd7f3135700ac273c619d92821b419a
+#   cursor       -- Copy rules to .cursor/rules/ (project) or ~/.cursor/rules/ (global)
+#   cursor-subagents -- Copy OpenCode-format agents to ~/.cursor/agents/ (user-wide)
 #   aider        -- Copy CONVENTIONS.md to current directory
 #   windsurf     -- Copy .windsurfrules to current directory
 #   openclaw     -- Copy workspaces to ~/.openclaw/agency-agents/
 #   qwen         -- Copy SubAgents to ~/.qwen/agents/ (user-wide) or .qwen/agents/ (project)
+#   kimi         -- Copy agents to ~/.config/kimi/agents/
 #   all          -- Install for all detected tools (default)
 #
 # Flags:
@@ -108,23 +104,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 INTEGRATIONS="$REPO_ROOT/integrations"
 
-<<<<<<< HEAD
-ALL_TOOLS=(claude-code copilot antigravity gemini-cli opencode openclaw cursor cursor-subagents aider windsurf qwen)
-=======
-ALL_TOOLS=(claude-code copilot antigravity gemini-cli opencode openclaw cursor aider windsurf qwen kimi)
+ALL_TOOLS=(claude-code copilot antigravity gemini-cli opencode openclaw cursor cursor-subagents aider windsurf qwen kimi)
 
 # Standard agent category directories (keep sorted, sync with convert.sh / lint-agents.sh)
 AGENT_DIRS=(
   academic design engineering finance game-development marketing paid-media product project-management
   sales spatial-computing specialized strategy support testing
 )
->>>>>>> 783f6a72bfd7f3135700ac273c619d92821b419a
 
 # ---------------------------------------------------------------------------
 # Usage
 # ---------------------------------------------------------------------------
 usage() {
-  sed -n '3,32p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '3,37p' "$0" | sed 's/^# \{0,1\}//'
   exit 0
 }
 
@@ -475,11 +467,22 @@ install_cursor() {
 }
 
 install_cursor_subagents() {
-  local src="$REPO_ROOT/.opencode/agents"
+  local src=""
   local dest="${HOME}/.cursor/agents"
   local count=0
 
-  [[ -d "$src" ]] || { err ".opencode/agents missing. Run ./scripts/convert.sh --tool opencode first."; return 1; }
+  # Prefer freshly generated OpenCode-format agents; fall back to repo-root .opencode/agents (e.g. vendored copy)
+  local integ="$INTEGRATIONS/opencode/agents"
+  local vendored="$REPO_ROOT/.opencode/agents"
+  if [[ -d "$integ" ]] && compgen -G "$integ/*.md" >/dev/null 2>&1; then
+    src="$integ"
+  elif [[ -d "$vendored" ]]; then
+    src="$vendored"
+  else
+    err "No OpenCode-format agent files found. Run ./scripts/convert.sh --tool opencode first."
+    return 1
+  fi
+
   mkdir -p "$dest"
 
   local f

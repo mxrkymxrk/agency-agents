@@ -151,8 +151,14 @@ See [openclaw/README.md](openclaw/README.md) for details.
 
 ## Cursor
 
-Each agent becomes a `.mdc` rule file. Rules are project-scoped — run the
-installer from your project root.
+**Subagents (fork):** OpenCode-format agents → `~/.cursor/agents/`.
+
+```bash
+./scripts/convert.sh --tool opencode
+./scripts/install.sh --tool cursor-subagents
+```
+
+**Rules:** each agent becomes a `.mdc` file — project-scoped by default.
 
 ```bash
 cd /your/project && /path/to/agency-agents/scripts/install.sh --tool cursor
