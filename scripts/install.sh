@@ -7,7 +7,7 @@
 # is missing or stale.
 #
 # Usage:
-#   ./scripts/install.sh [--tool <name>] [--interactive] [--no-interactive] [--parallel] [--jobs N] [--help]
+#   ./scripts/install.sh [--tool <name>] [--cursor-scope <project|global>] [--interactive] [--no-interactive] [--parallel] [--jobs N] [--help]
 #
 # Tools:
 #   claude-code  -- Copy agents to ~/.claude/agents/
@@ -15,7 +15,8 @@
 #   antigravity  -- Copy skills to ~/.gemini/antigravity/skills/
 #   gemini-cli   -- Install extension to ~/.gemini/extensions/agency-agents/
 #   opencode     -- Copy agents to .opencode/agent/ in current directory
-#   cursor       -- Copy rules to .cursor/rules/ in current directory
+#   cursor       -- Copy rules to .cursor/rules/ (project) or ~/.cursor/rules/ (global)
+#   cursor-subagents -- Copy subagents to ~/.cursor/agents/ (user-wide)
 #   aider        -- Copy CONVENTIONS.md to current directory
 #   windsurf     -- Copy .windsurfrules to current directory
 #   openclaw     -- Copy workspaces to ~/.openclaw/agency-agents/
@@ -24,6 +25,7 @@
 #
 # Flags:
 #   --tool <name>     Install only the specified tool
+#   --cursor-scope    Cursor rules install scope: project (default) or global
 #   --interactive     Show interactive selector (default when run in a terminal)
 #   --no-interactive  Skip interactive selector, install all detected tools
 #   --parallel        Run install for each selected tool in parallel (output order may vary)
@@ -101,7 +103,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 INTEGRATIONS="$REPO_ROOT/integrations"
 
-ALL_TOOLS=(claude-code copilot antigravity gemini-cli opencode openclaw cursor aider windsurf qwen)
+ALL_TOOLS=(claude-code copilot antigravity gemini-cli opencode openclaw cursor cursor-subagents aider windsurf qwen)
 
 # ---------------------------------------------------------------------------
 # Usage
@@ -137,6 +139,7 @@ detect_copilot()      { command -v code >/dev/null 2>&1 || [[ -d "${HOME}/.githu
 detect_antigravity()  { [[ -d "${HOME}/.gemini/antigravity/skills" ]]; }
 detect_gemini_cli()   { command -v gemini >/dev/null 2>&1 || [[ -d "${HOME}/.gemini" ]]; }
 detect_cursor()       { command -v cursor >/dev/null 2>&1 || [[ -d "${HOME}/.cursor" ]]; }
+detect_cursor_subagents() { detect_cursor; }
 detect_opencode()     { command -v opencode >/dev/null 2>&1 || [[ -d "${HOME}/.config/opencode" ]]; }
 detect_aider()        { command -v aider >/dev/null 2>&1; }
 detect_openclaw()     { command -v openclaw >/dev/null 2>&1 || [[ -d "${HOME}/.openclaw" ]]; }
@@ -152,6 +155,7 @@ is_detected() {
     opencode)    detect_opencode    ;;
     openclaw)    detect_openclaw    ;;
     cursor)      detect_cursor      ;;
+    cursor-subagents) detect_cursor_subagents ;;
     aider)       detect_aider       ;;
     windsurf)    detect_windsurf    ;;
     qwen)        detect_qwen        ;;
@@ -169,6 +173,7 @@ tool_label() {
     opencode)    printf "%-14s  %s" "OpenCode"     "(opencode.ai)"           ;;
     openclaw)    printf "%-14s  %s" "OpenClaw"     "(~/.openclaw)"           ;;
     cursor)      printf "%-14s  %s" "Cursor"       "(.cursor/rules)"         ;;
+    cursor-subagents) printf "%-14s  %s" "Cursor" "(`~/.cursor/agents`)" ;;
     aider)       printf "%-14s  %s" "Aider"        "(CONVENTIONS.md)"        ;;
     windsurf)    printf "%-14s  %s" "Windsurf"     "(.windsurfrules)"        ;;
     qwen)        printf "%-14s  %s" "Qwen Code"    "(~/.qwen/agents)"        ;;
@@ -410,7 +415,13 @@ install_openclaw() {
 
 install_cursor() {
   local src="$INTEGRATIONS/cursor/rules"
-  local dest="${PWD}/.cursor/rules"
+  local scope="${CURSOR_SCOPE:-project}"
+  local dest
+  if [[ "$scope" == "global" ]]; then
+    dest="${HOME}/.cursor/rules"
+  else
+    dest="${PWD}/.cursor/rules"
+  fi
   local count=0
   [[ -d "$src" ]] || { err "integrations/cursor missing. Run convert.sh first."; return 1; }
   mkdir -p "$dest"
@@ -419,7 +430,28 @@ install_cursor() {
     cp "$f" "$dest/"; (( count++ )) || true
   done < <(find "$src" -maxdepth 1 -name "*.mdc" -print0)
   ok "Cursor: $count rules -> $dest"
-  warn "Cursor: project-scoped. Run from your project root to install there."
+  if [[ "$scope" == "global" ]]; then
+    warn "Cursor: global (user-wide) install. Rules apply across projects."
+  else
+    warn "Cursor: project-scoped install. Run from your project root to install there."
+  fi
+}
+
+install_cursor_subagents() {
+  local src="$REPO_ROOT/.opencode/agents"
+  local dest="${HOME}/.cursor/agents"
+  local count=0
+
+  [[ -d "$src" ]] || { err ".opencode/agents missing. Run ./scripts/convert.sh --tool opencode first."; return 1; }
+  mkdir -p "$dest"
+
+  local f
+  while IFS= read -r -d '' f; do
+    cp "$f" "$dest/"; (( count++ )) || true
+  done < <(find "$src" -maxdepth 1 -name "*.md" -print0)
+
+  ok "Cursor: $count subagents -> $dest"
+  warn "Subagents use their own prompt context; restart Cursor after installing."
 }
 
 install_aider() {
@@ -477,6 +509,7 @@ install_tool() {
     opencode)    install_opencode    ;;
     openclaw)    install_openclaw    ;;
     cursor)      install_cursor      ;;
+    cursor-subagents) install_cursor_subagents ;;
     aider)       install_aider       ;;
     windsurf)    install_windsurf    ;;
     qwen)        install_qwen        ;;
@@ -490,12 +523,14 @@ main() {
   local tool="all"
   local interactive_mode="auto"
   local use_parallel=false
+  local cursor_scope="project"
   local parallel_jobs
   parallel_jobs="$(parallel_jobs_default)"
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --tool)            tool="${2:?'--tool requires a value'}"; shift 2; interactive_mode="no" ;;
+      --cursor-scope)   cursor_scope="${2:?'--cursor-scope requires a value'}"; shift 2 ;;
       --interactive)     interactive_mode="yes"; shift ;;
       --no-interactive)  interactive_mode="no"; shift ;;
       --parallel)        use_parallel=true; shift ;;
@@ -506,6 +541,8 @@ main() {
   done
 
   check_integrations
+
+  export CURSOR_SCOPE="$cursor_scope"
 
   # Validate explicit tool
   if [[ "$tool" != "all" ]]; then
